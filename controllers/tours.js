@@ -1,89 +1,105 @@
-const Tour = require('../models/Tour')
+const Tour = require('../models/Tour');
+const { catchAsync } = require('../utils/utils');
 
-module.exports.getAllTours = async (req, res) => {
-    let query = JSON.stringify(req.query);
-    query = query.replace(/(gt|gte|lt|lte)/g, match => `$${match}`);
-    // console.log(query);
-    try {
-      let data;
-      if(req.query.page !== undefined && req.query.fields !== undefined){
-
-        data = await Tour.find(JSON.parse(query)).select(req.query.fields.replace(",", " "))
-               .limit(req.query.limit || 10).skip(req.query.limit*(req.query.page-1));
-
-      } else if (req.query.fields !== undefined){
-
-        data = await Tour.find(JSON.parse(query)).select(req.query.fields.replace(",", " "));
-        
-      } else if (req.query.page !== undefined){
-        data = await Tour.find(JSON.parse(query)).limit(req.query.limit || 10).skip(req.query.limit*(req.query.page-1));
-      } else {
-        data = await Tour.find(JSON.parse(query))
-      }
-
-      res.json({ status: "success", data });
-    } catch (error) {
-      res.status(500).json({ status: "failure", message: error.message})
+module.exports = {
+  findTourById: async (req, res, next) => {
+    const { id } = req.params;
+    const tour = await Tour.findById(id);
+    if (tour === null) {
+        return next({
+            status: 'failed',
+            message: 'not found'
+        })
     }
-  }
-
-module.exports.createNewTour = async (req, res) => {
-    try {
-      const data = await Tour.create(req.body);
+    req.tour = tour;
+    next();
+  },
+  getTourById: catchAsync(async (req, res) => {
       res.json({
-        status: "success",
-        data
+          status: 'success',
+          data: req.tour
       });
-    } catch (error) {
-      res.status(400).json({ status: "failure", message: error.message})
-    }
-  }
+  }),
+  getAllTours: catchAsync(async (req, res) => {
+    // console.log('get tour method');
+    let query = JSON.stringify(req.query);
+    query = query.replace(/(gt|gte|lt|lte)/, match => `$${match}`);
 
-module.exports.updateTour = async (req, res) => {
+    let tours = Tour.find(JSON.parse(query));
+
+    if (req.query.fields !== undefined) {
+        tours = tours.select(req.query.fields.replace(',', ' '));
+    }
+    if (req.query.page !== undefined) {
+        const { limit } = req.query;
+        tours.skip((+req.query.page - 1) * limit);
+        tours.limit(limit);
+    }
+    res.json({
+        status: 'success',
+        data: await tours
+    })
+  }),
+  createNewTour: catchAsync(async (req, res) => {
+    const tour = await Tour.create(req.body);
+    res.json({
+        status: 'success',
+        data: tour
+    });
+  }),
+  updateTour: async (req, res) => {
     const { id } = req.params;
     try {
       const data = await Tour.findByIdAndUpdate(id, req.body, { new: true });
-      if(data === null) {
-        return res.status(404).json({ status: "failure",data: "Tour not found"})
-      }
       res.json({
-        status: "success",
-        data
+        status: 'success',
+        data,
       });
     } catch (error) {
-      res.status(500).json({ status: "failure", message: error.message})
+      res.status(500).json({ status: 'failure', message: error.message });
     }
-  }
-
-module.exports.deleteTour = async (req, res) => {
+  },
+  deleteTour: async (req, res) => {
     const { id } = req.params;
     try {
-      const data = await Tour.findByIdAndDelete(id, req.body);
-      if(data === null) {
-        return res.status(404).json({ status: "failure", data: "Tour not found"})
-      }
-      res.json({
-        status: "success",
-        data
-      });
+      await Tour.findByIdAndDelete(id);
+      res.status(404).json();
+      // res.json({
+      //   status: 'success',
+      //   data,
+      // });
     } catch (error) {
-      res.status(500).json({ status: "failure", message: error.message})
+      res.status(500).json({ status: 'failure', message: error.message });
     }
-  }
+  },
+};
 
-module.exports.getTourById = async (req, res) => {
-    const { id } = req.params;
-    try {
-      const data = await Tour.findById(id);
-      console.log("dsgfnbfdasfhgmsdafshj,fadsafmn");
-      console.log(data);
-     
-      res.json({
-        status: "success",
-        data
-      });
-    } catch (error) {
-      res.status(500).json({ status: "failure", message: error.message})
-    }
-  }
-  
+
+// getAllTours: async (req, res) => {
+//   let query = JSON.stringify(req.query);
+//   query = query.replace(/(gt|gte|lt|lte)/g, (match) => `$${match}`);
+//   // console.log(query);
+//   try {
+//     let data;
+//     if (req.query.page !== undefined && req.query.fields !== undefined) {
+//       data = await Tour.find(JSON.parse(query))
+//         .select(req.query.fields.replace(',', ' '))
+//         .limit(req.query.limit || 10)
+//         .skip(req.query.limit * (req.query.page - 1));
+//     } else if (req.query.fields !== undefined) {
+//       data = await Tour.find(JSON.parse(query)).select(
+//         req.query.fields.replace(',', ' ')
+//       );
+//     } else if (req.query.page !== undefined) {
+//       data = await Tour.find(JSON.parse(query))
+//         .limit(req.query.limit || 10)
+//         .skip(req.query.limit * (req.query.page - 1));
+//     } else {
+//       data = await Tour.find(JSON.parse(query));
+//     }
+
+//     res.json({ status: 'success', data });
+//   } catch (error) {
+//     res.status(500).json({ status: 'failure', message: error.message });
+//   }
+// },

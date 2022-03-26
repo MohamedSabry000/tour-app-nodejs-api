@@ -19,9 +19,9 @@ const tourScheme = new Schema({
     price: Number,
     summary: String,
     description: String,
-    imageCover: String,
+    // imageCover: String,
     images: { type: Array },
-    startDates: { type: Array }
+    startDates: { type: Date }
 })
 
 const Tour = model('Tour', tourScheme);
